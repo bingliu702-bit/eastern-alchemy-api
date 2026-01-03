@@ -2,34 +2,27 @@ import { generateStructure } from "../src/services/structure.service.js";
 import { generateReading } from "../src/services/openai.service.js";
 
 export default async function handler(req, res) {
-  // 允许 POST / GET
-  if (req.method === "GET") {
-    if (req.url === "/api/health" || req.url === "/health") {
-      return res.status(200).json({ status: "ok" });
-    }
-    return res.status(404).json({ error: "Not found" });
+  // 只允许 POST
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  const {
+    full_name,
+    birth_date,
+    birth_time,
+    birth_place,
+    email,
+  } = req.body || {};
+
+  if (!full_name || !birth_date || !birth_place || !email) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields",
+    });
   }
 
   try {
-    const {
-      full_name,
-      birth_date,
-      birth_time,
-      birth_place,
-      email,
-    } = req.body || {};
-
-    if (!full_name || !birth_date || !birth_place || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-      });
-    }
-
     const structure = generateStructure({
       full_name,
       birth_date,
@@ -45,10 +38,10 @@ export default async function handler(req, res) {
       reading,
     });
   } catch (err) {
-    console.error("API ERROR:", err);
+    console.error("❌ Generation error:", err);
     return res.status(500).json({
       success: false,
-      error: err.message,
+      error: err.message || String(err),
     });
   }
 }
