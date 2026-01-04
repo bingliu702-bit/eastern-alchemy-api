@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "mailersend": "^2.6.0",
+    "nodemailer": "^7.0.12",
     "openai": "^4.0.0"
   }
 }
