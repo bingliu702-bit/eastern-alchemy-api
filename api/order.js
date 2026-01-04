@@ -1,82 +1,108 @@
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+
+// 初始化 MailerSend
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ success: false, error: "Method Not Allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
     const {
       name,
-      email,
       birth_date,
-      birth_time,
-      birth_place,
-      mode = "PROD",
-    } = req.body || {};
+      email,
+      mode = "PAID"
+    } = req.body;
 
+    // 基础校验
     if (!name || !birth_date) {
       return res.status(400).json({
-        success: false,
-        error: "Missing required fields",
+        error: "Missing required fields"
       });
     }
 
-    // ===== TEST MODE（100% 稳定，不触发 OpenAI）=====
+    // =========================
+    // ===== TEST MODE =========
+    // =========================
     if (mode === "TEST") {
+      const content = `TEST MODE: ${name}, your Five-Element energy shows a Water-dominant signature.`;
+
+      // 👉 TEST 模式：发测试邮件
+      if (email) {
+        const from = new Sender(
+          process.env.MAILERSEND_FROM,
+          process.env.MAILERSEND_FROM_NAME || "Eastern Alchemy"
+        );
+
+        const recipients = [
+          new Recipient(email, name)
+        ];
+
+        const emailParams = new EmailParams()
+          .setFrom(from)
+          .setTo(recipients)
+          .setSubject("Eastern Alchemy · TEST Report")
+          .setHtml(`
+            <div style="font-family: Arial, sans-serif; line-height:1.6;">
+              <h2>Eastern Alchemy · Test Delivery</h2>
+              <p>Hello ${name},</p>
+              <p>${content}</p>
+              <p style="color:#888;font-size:12px;">This is a TEST email.</p>
+            </div>
+          `);
+
+        await mailerSend.email.send(emailParams);
+      }
+
       return res.status(200).json({
         success: true,
+        order_status: "TEST_COMPLETED",
         next_step: "CONTENT_READY",
-        content: `TEST MODE: ${name}, your Five-Element energy shows a Water-dominant signature.`,
+        content,
+        mail_sent: !!email
       });
     }
 
-    // ===== PROD MODE =====
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        error: "OPENAI_API_KEY not set",
-      });
+    // =========================
+    // ===== PAID MODE =========
+    // =========================
+    const generateResponse = await fetch(
+      `${process.env.BASE_URL}/api/generate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name,
+          birth_date,
+          mode: "PAID"
+        })
+      }
+    );
+
+    if (!generateResponse.ok) {
+      throw new Error("Generate API failed");
     }
 
-    // ⚠️ 关键：在函数内部再 import & 初始化
-    const { default: OpenAI } = await import("openai");
-
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const prompt = `
-User: ${name}
-Birth: ${birth_date} ${birth_time || ""}
-Place: ${birth_place || ""}
-
-Give a short Five-Element (Wu Xing) insight in English.
-`;
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a professional Eastern metaphysics advisor." },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.7,
-    });
-
-    const content =
-      completion?.choices?.[0]?.message?.content ||
-      "Content generation failed.";
+    const generateResult = await generateResponse.json();
 
     return res.status(200).json({
       success: true,
+      order_status: "PAID_COMPLETED",
       next_step: "CONTENT_READY",
-      content,
+      content: generateResult.content
     });
-  } catch (err) {
-    console.error("ORDER API ERROR:", err);
 
+  } catch (err) {
+    console.error("ORDER ERROR:", err);
     return res.status(500).json({
-      success: false,
-      error: "Order generation failed",
-      message: err?.message || "Unknown error",
+      error: "Order processing failed",
+      message: err.message
     });
   }
 }

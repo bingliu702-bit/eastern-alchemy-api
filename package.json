@@ -7,9 +7,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "mailersend": "^2.6.0",
     "openai": "^4.0.0"
   }
 }
-
-
-
