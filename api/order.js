@@ -59,12 +59,14 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({
-        success: true,
-        order_status: "TEST_COMPLETED",
-        next_step: "CONTENT_READY",
-        content,
-        mail_sent: !!email
-      });
+  success: true,
+  version: "ORDER_API_V2_WITH_MAILERSEND",
+  order_status: "TEST_COMPLETED",
+  next_step: "CONTENT_READY",
+  content,
+  mail_sent: !!email
+});
+
     }
 
     // =========================
