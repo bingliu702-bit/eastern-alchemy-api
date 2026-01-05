@@ -1,41 +1,30 @@
 import nodemailer from "nodemailer";
 
-// ==========================
-// Zoho SMTP Transport
-// ==========================
+// ===== 强制使用 OAuth2（不允许 SMTP）=====
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,          // smtp.zoho.com.cn
-  port: Number(process.env.SMTP_PORT),  // 465
-  secure: process.env.SMTP_SECURE === "true",
+  service: "gmail",
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
+    type: "OAuth2",
+    user: process.env.GMAIL_SENDER,
+    clientId: process.env.GMAIL_CLIENT_ID,
+    clientSecret: process.env.GMAIL_CLIENT_SECRET,
+    refreshToken: process.env.GMAIL_REFRESH_TOKEN,
   },
 });
 
-// ==========================
-// API Handler
-// ==========================
+// 🔒 防御性检查（非常重要）
+if (!process.env.GMAIL_REFRESH_TOKEN) {
+  throw new Error("GMAIL_REFRESH_TOKEN is missing");
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // ✅ 和你前端 JSON 完全一致
-    const {
-      full_name,
-      birth_date,
-      birth_time,
-      birth_place,
-      email,
-      is_test = false,
-    } = req.body;
+    const { full_name, birth_date, email, is_test } = req.body;
 
-    // ✅ 正确校验
     if (!full_name || !birth_date) {
       return res.status(400).json({
         error: "Missing required fields",
@@ -44,54 +33,25 @@ export default async function handler(req, res) {
       });
     }
 
-    // =========================
-    // ===== TEST MODE =========
-    // =========================
     if (is_test === true) {
-      const content = `
-        Name: ${full_name}<br/>
-        Birth: ${birth_date} ${birth_time || ""}<br/>
-        Place: ${birth_place || "Unknown"}<br/><br/>
-        <strong>Five-Element Insight (TEST):</strong><br/>
-        Your chart shows a Water-dominant signature with supportive Metal energy.
-      `;
-
-      if (email) {
-        await transporter.sendMail({
-          from: `"Eastern Alchemy" <${process.env.SMTP_USER}>`,
-          to: email,
-          subject: "Eastern Alchemy · TEST Report",
-          html: `
-            <div style="font-family: Arial, sans-serif; line-height:1.6;">
-              <h2>Eastern Alchemy · Test Delivery</h2>
-              <p>Hello ${full_name},</p>
-              <p>${content}</p>
-              <p style="color:#888;font-size:12px;">
-                This is a TEST email.
-              </p>
-            </div>
-          `,
-        });
-      }
+      const info = await transporter.sendMail({
+        from: `"Eastern Alchemy" <${process.env.GMAIL_SENDER}>`,
+        to: email,
+        subject: "Eastern Alchemy · Test Report",
+        html: `<p>Hello ${full_name}, this is a Gmail OAuth test email.</p>`,
+      });
 
       return res.status(200).json({
         success: true,
-        version: "ORDER_API_V3_ZOHO_SMTP",
-        order_status: "TEST_COMPLETED",
-        content,
-        mail_sent: !!email,
+        transport: "GMAIL_OAUTH2",
+        messageId: info.messageId,
       });
     }
 
-    // =========================
-    // ===== PAID MODE =========
-    // =========================
     return res.status(200).json({
       success: true,
-      order_status: "PAID_RECEIVED",
-      message: "Payment confirmed. Content generation queued.",
+      message: "Paid flow not enabled",
     });
-
   } catch (err) {
     console.error("ORDER ERROR:", err);
     return res.status(500).json({
@@ -100,3 +60,4 @@ export default async function handler(req, res) {
     });
   }
 }
+
