@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: A4; margin: 16mm; }
+    body { font-family: Arial, sans-serif; color: #222; }
+    .page { page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    h1 { font-size: 26px; margin-bottom: 12px; }
+    p { font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE 1: Cover -->
+  <section class="page">
+    <h1>Eastern Alchemy</h1>
+    <p><strong>Name:</strong> {{meta.name}}</p>
+    <p><strong>Birth:</strong> {{meta.birth_date}} {{meta.birth_time}}</p>
+    <p><strong>Place:</strong> {{meta.birth_place}}</p>
+    <p><strong>Dominant Element:</strong> {{meta.dominant_element}}</p>
+  </section>
+
+  <!-- PAGE 2: Core Theme -->
+  <section class="page">
+    <h1>Core Theme</h1>
+    <p>{{overview.core_theme}}</p>
+  </section>
+
+  <!-- PAGE 3: Overview -->
+  <section class="page">
+    <h1>Overview</h1>
+    <p>{{overview.summary}}</p>
+  </section>
+
+</body>
+</html>
