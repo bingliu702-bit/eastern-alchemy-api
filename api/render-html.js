@@ -1,19 +1,22 @@
-export default async function handler(req, res) {
-  try {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.status(200).send(`
-      <html>
-        <head><title>EA Render Test</title></head>
-        <body>
-          <h1>Eastern Alchemy</h1>
-          <p>render-html function is alive ✅</p>
-        </body>
-      </html>
-    `);
-  } catch (err) {
-    res.status(500).json({
-      ok: false,
-      error: err.message,
-    });
+const report = {
+  meta: {
+    brand: "Eastern Alchemy",
+    client_name: "Test User",
+  },
+  overview: {
+    core_theme: "Balance & Transformation",
+    summary: "This is a test overview summary.",
+  },
+  analysis: {
+    strengths: [
+      "Strong intuition",
+      "Natural leadership",
+      "High emotional intelligence"
+    ],
+    challenges: [
+      "Overthinking",
+      "Energy imbalance"
+    ]
   }
-}
+};
+
